@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OON | Dashboard Groeistrategie 2026–2027</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f4f5f7; color: #333; padding: 24px; }
+
+  /* ── CONFIG SCHERM ── */
+  #config-screen { max-width: 480px; margin: 80px auto; background: white; border-radius: 16px; padding: 36px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+  #config-screen h2 { font-size: 20px; margin-bottom: 8px; color: #1a1a2e; }
+  #config-screen p { font-size: 13px; color: #777; margin-bottom: 24px; line-height: 1.6; }
+  #config-screen label { font-size: 13px; font-weight: 600; color: #444; display: block; margin-bottom: 6px; }
+  #config-screen input { width: 100%; padding: 10px 14px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; font-family: monospace; margin-bottom: 16px; }
+  #config-screen input:focus { outline: none; border-color: #7b5ea7; }
+  #config-screen button { width: 100%; padding: 12px; background: #7b5ea7; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  #config-screen button:hover { background: #6a4f93; }
+  .hint { font-size: 11px; color: #aaa; margin-top: 12px; text-align: center; }
+
+  /* ── DASHBOARD ── */
+  #dashboard { display: none; }
+  header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  header h1 { font-size: 22px; font-weight: 700; color: #1a1a2e; }
+  header p { font-size: 13px; color: #888; margin-top: 4px; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  .btn-refresh { background: #7b5ea7; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 600; }
+  .btn-refresh:hover { background: #6a4f93; }
+  .btn-reset { background: none; border: 1px solid #ddd; color: #999; padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+
+  .loading { text-align: center; padding: 60px; color: #999; font-size: 14px; }
+  .error-msg { background: #fff0f0; border-left: 4px solid #df2f4a; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; font-size: 13px; color: #a00; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+  .attention-banner { background: #fff8e1; border-left: 4px solid #fdab3d; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; font-size: 13px; color: #7a5c00; }
+  .attention-banner strong { display: block; margin-bottom: 4px; font-size: 14px; }
+
+  .totals { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .total-card { background: white; border-radius: 10px; padding: 14px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); flex: 1; min-width: 110px; text-align: center; }
+  .total-card .num { font-size: 28px; font-weight: 700; }
+  .total-card .lbl { font-size: 11px; color: #999; margin-top: 2px; }
+
+  .section-title { font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; margin-top: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; margin-bottom: 28px; }
+
+  .card { background: white; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+  .card-title { font-size: 14px; font-weight: 600; color: #1a1a2e; line-height: 1.3; }
+  .card-count { font-size: 11px; color: #aaa; white-space: nowrap; margin-left: 8px; margin-top: 2px; }
+  .battery-track { height: 14px; border-radius: 7px; background: #eee; overflow: hidden; display: flex; }
+  .battery-segment { height: 100%; }
+  .status-breakdown { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .status-pill { font-size: 11px; padding: 2px 8px; border-radius: 20px; color: white; font-weight: 500; }
+
+  .last-updated { font-size: 11px; color: #bbb; text-align: right; margin-top: -16px; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<!-- CONFIG SCHERM -->
+<div id="config-screen">
+  <h2>🍷 OON Dashboard</h2>
+  <p>Vul je Monday.com persoonlijk API-token in. Dit wordt alleen lokaal in je browser opgeslagen en nooit verstuurd naar derden.</p>
+  <label for="token-input">Persoonlijk API-token</label>
+  <input type="password" id="token-input" placeholder="eyJhbGci..." autocomplete="off" />
+  <button onclick="saveAndLoad()">Dashboard laden →</button>
+  <p class="hint">Token vinden: Monday → Profielfoto → Ontwikkelaars → Persoonlijk API-token</p>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <header>
+    <div>
+      <h1>OON | Groeistrategie 2026–2027</h1>
+      <p id="last-update-header">Laden...</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-refresh" onclick="loadDashboard()">↻ Vernieuwen</button>
+      <button class="btn-reset" onclick="resetToken()">Token wijzigen</button>
+    </div>
+  </header>
+  <div id="dashboard-content"><div class="loading">Data ophalen uit Monday...</div></div>
+</div>
+
+<script>
+// ── CONFIGURATIE ──────────────────────────────────────────────
+const BOARD_ID = 18415734631;
+
+const STATUS_COLORS = {
+  'Klaar':          '#00c875',
+  'Mee bezig':      '#ffcb00',
+  'Gepland':        '#e484bd',
+  'Inplannen':      '#ff5ac4',
+  'Wacht op input': '#fdab3d',
+  'Informatie':     '#df2f4a',
+  'Geannuleerd':    '#757575',
+  'On Hold':        '#333333',
+  'Concept':        '#007eb5',
+  'Interne check':  '#ff6d3b',
+};
+
+const SECTION_MAP = {
+  'Communicatie regie':                      null,
+  '🎯Regie | Mijlpalen & Evaluaties':        'regie',
+  '📱 Doorlopend | Social & Content':        'doorlopend',
+  '🏗️ Project 1 | Basis op orde & Contentcreatie': 'projecten',
+  '🌐 Project 2 | Website & Contentproductie':     'projecten',
+  '🎁 Project 4 | Gifts & Verpakking':             'projecten',
+  '💼 Project 9 | B2B Propositie':                 'projecten',
+  '🍽️ Project 10 | Horeca Samenwerkingen':         'projecten',
+  '🚀 Campagne Q3 | Het nieuwe oonivoo':           'campagnes',
+  '🎄 Campagne Q4 | Het cadeau dat raak is':       'campagnes',
+  '🌱 Campagne Q1 | Nieuw jaar, nieuwe wijn':      'campagnes',
+  '📊 Doorlopend | SEA & Online Marketing':        'doorlopend',
+  '🤝 Overleg & Ritme':                            'regie',
+};
+
+// ── TOKEN BEHEER ──────────────────────────────────────────────
+function getToken() { return localStorage.getItem('oon_monday_token'); }
+
+function saveAndLoad() {
+  const val = document.getElementById('token-input').value.trim();
+  if (!val || val.length < 20) { alert('Vul een geldig API-token in.'); return; }
+  localStorage.setItem('oon_monday_token', val);
+  showDashboard();
+}
+
+function resetToken() {
+  localStorage.removeItem('oon_monday_token');
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('config-screen').style.display = 'block';
+  document.getElementById('token-input').value = '';
+}
+
+function showDashboard() {
+  document.getElementById('config-screen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  loadDashboard();
+}
+
+// ── API CALL ──────────────────────────────────────────────────
+async function fetchMonday(query) {
+  const token = getToken();
+  const res = await fetch('https://api.monday.com/v2', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+    body: JSON.stringify({ query })
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const json = await res.json();
+  if (json.errors) throw new Error(json.errors[0].message);
+  return json.data;
+}
+
+// ── DATA LADEN ────────────────────────────────────────────────
+async function loadDashboard() {
+  const content = document.getElementById('dashboard-content');
+  content.innerHTML = '<div class="loading">⏳ Data ophalen uit Monday...</div>';
+
+  try {
+    const data = await fetchMonday(`{
+      boards(ids: ${BOARD_ID}) {
+        groups { id title }
+        items_page(limit: 500) {
+          items {
+            group { title }
+            column_values(ids: ["color_mm3x7tms"]) { text }
+          }
+        }
+      }
+    }`);
+
+    const items = data.boards[0].items_page.items;
+    renderDashboard(items);
+
+    const now = new Date().toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' });
+    document.getElementById('last-update-header').textContent = `Bijgewerkt op ${now}`;
+
+  } catch(e) {
+    content.innerHTML = `<div class="error-msg">⚠️ Kon geen data ophalen: ${e.message}<br><br>Controleer je API-token of klik op "Token wijzigen".</div>`;
+  }
+}
+
+// ── RENDER ────────────────────────────────────────────────────
+function renderDashboard(items) {
+  // Groepeer per group → status
+  const groupData = {};
+  items.forEach(item => {
+    const group = item.group?.title || 'Onbekend';
+    const status = item.column_values[0]?.text || 'Geen status';
+    if (!groupData[group]) groupData[group] = {};
+    groupData[group][status] = (groupData[group][status] || 0) + 1;
+  });
+
+  // Totalen
+  const totals = {};
+  items.forEach(item => {
+    const s = item.column_values[0]?.text || 'Geen status';
+    totals[s] = (totals[s] || 0) + 1;
+  });
+  const totalAll = items.length;
+
+  // Aandacht banner
+  const waitGroups = Object.entries(groupData)
+    .filter(([, s]) => (s['Wacht op input'] || 0) > 0)
+    .map(([g]) => g.replace(/^[^\w]+/, '').split('|')[0].trim());
+
+  // Urgentiescore
+  function urgency(statuses) {
+    return (statuses['Wacht op input'] || 0) * 3 + (statuses['Inplannen'] || 0);
+  }
+
+  function renderCard(groupName, statuses) {
+    const total = Object.values(statuses).reduce((a,b) => a+b, 0);
+    const klaar = statuses['Klaar'] || 0;
+    const pct = total > 0 ? Math.round((klaar / total) * 100) : 0;
+
+    const segments = Object.entries(statuses)
+      .map(([label, count]) => {
+        const w = (count / total * 100).toFixed(1);
+        const color = STATUS_COLORS[label] || '#ccc';
+        return `<div class="battery-segment" style="width:${w}%;background:${color}" title="${label}: ${count}"></div>`;
+      }).join('');
+
+    const pills = Object.entries(statuses)
+      .map(([label, count]) => {
+        const color = STATUS_COLORS[label] || '#ccc';
+        return `<span class="status-pill" style="background:${color}">${count} ${label}</span>`;
+      }).join('');
+
+    const u = urgency(statuses);
+    const border = u >= 3 ? 'border-left: 4px solid #fdab3d;' : u >= 1 ? 'border-left: 4px solid #ff5ac4;' : '';
+
+    return `
+      <div class="card" style="${border}">
+        <div class="card-header">
+          <div class="card-title">${groupName}</div>
+          <div class="card-count">${klaar}/${total} klaar (${pct}%)</div>
+        </div>
+        <div class="battery-track">${segments}</div>
+        <div class="status-breakdown">${pills}</div>
+      </div>`;
+  }
+
+  const sections = { projecten: [], campagnes: [], doorlopend: [], regie: [] };
+
+  Object.entries(groupData).forEach(([group, statuses]) => {
+    const section = SECTION_MAP[group];
+    if (section && sections[section]) {
+      sections[section].push({ group, statuses });
+    }
+  });
+
+  Object.values(sections).forEach(arr => arr.sort((a,b) => urgency(b.statuses) - urgency(a.statuses)));
+
+  const totalCards = Object.entries({
+    'Klaar': '#00c875', 'Mee bezig': '#ffcb00', 'Gepland': '#e484bd',
+    'Inplannen': '#ff5ac4', 'Wacht op input': '#fdab3d'
+  }).map(([label, color]) => `
+    <div class="total-card">
+      <div class="num" style="color:${color}">${totals[label] || 0}</div>
+      <div class="lbl">${label}</div>
+    </div>`).join('') + `<div class="total-card"><div class="num" style="color:#333">${totalAll}</div><div class="lbl">Totaal items</div></div>`;
+
+  const bannerHtml = waitGroups.length > 0 ? `
+    <div class="attention-banner">
+      <strong>⚠️ Wacht op input</strong>
+      ${waitGroups.join(', ')} — actie of go/no-go beslissing nodig.
+    </div>` : '';
+
+  const legendHtml = `<div class="legend">` +
+    Object.entries(STATUS_COLORS).map(([label, color]) =>
+      `<div class="legend-item"><div class="legend-dot" style="background:${color}"></div>${label}</div>`
+    ).join('') + `</div>`;
+
+  function sectionHtml(title, key) {
+    if (!sections[key].length) return '';
+    return `<div class="section-title">${title}</div>
+    <div class="grid">${sections[key].map(({group, statuses}) => renderCard(group, statuses)).join('')}</div>`;
+  }
+
+  document.getElementById('dashboard-content').innerHTML = `
+    ${bannerHtml}
+    <div class="totals">${totalCards}</div>
+    ${legendHtml}
+    ${sectionHtml('Projecten', 'projecten')}
+    ${sectionHtml('Campagnes', 'campagnes')}
+    ${sectionHtml('Doorlopend', 'doorlopend')}
+    ${sectionHtml('Regie & Overleg', 'regie')}
+  `;
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+window.onload = () => {
+  if (getToken()) { showDashboard(); }
+};
+</script>
+</body>
+</html>
